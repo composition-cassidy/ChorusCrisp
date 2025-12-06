@@ -55,15 +55,7 @@ Notice how each clip now has an overlapping section with crossfades, and the sec
 | Volume Duck | -1 dB to -17 dB | -1.0 dB | How much quieter the second clip should be. More negative = more ducking. |
 | Crossfade Curve | Linear, Fast, Slow, Sharp, Smooth | Linear | The shape of the crossfade between clips. |
 
-## Compatibility
-
-- ✅ Vegas Pro 14
-- ✅ Vegas Pro 22
-- ✅ Vegas Pro 23
-
-Uses `ScriptPortal.Vegas` namespace (Vegas Pro 14+).
-
-## How It Works (Technical)
+## How It Works
 
 For each selected audio event, the script:
 
