@@ -2,8 +2,6 @@
 
 A Vegas Pro script for creating punchy, layered vocal chop effects commonly used in Sparta Remixes.
 
-![Chorus Crisp Dialog](images/dialog.png)
-
 ## What It Does
 
 Chorus Crisp automates a technique where each audio clip is:
@@ -87,18 +85,6 @@ For each selected audio event, the script:
 
 All operations are wrapped in an `UndoBlock` so you can Ctrl+Z the entire batch.
 
-## Compatibility
-
-- ✅ Vegas Pro 14
-- ✅ Vegas Pro 22
-- ✅ Vegas Pro 23
-
-Uses `ScriptPortal.Vegas` namespace (Vegas Pro 14+).
-
 ## License
 
-Free to use and modify. Credit appreciated but not required.
-
-## Credits
-
-Created for the Sparta Remix community.
+Free to use and modify. Credit appreciated but not required..
