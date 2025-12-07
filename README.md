@@ -2,6 +2,38 @@
 
 A Vegas Pro script for creating punchy, layered vocal chop effects commonly used in Sparta Remixes.
 
+## For Developers
+
+### Building from Source
+
+This project uses a modular C# structure and outputs as a DLL for Vegas Pro.
+
+#### Prerequisites
+- .NET Framework 4.8 SDK
+- Visual Studio or VS Code with C# extensions
+- Vegas Pro (for ScriptPortal.Vegas.dll reference)
+
+#### Build Steps
+1. Clone the repository
+2. Open the project in VS Code or Visual Studio
+3. Build the Release configuration:
+   ```bash
+   dotnet build ChorusCrisp.csproj --configuration Release
+   ```
+4. The compiled DLL will be at: `bin\Release\ChorusCrisp.dll`
+
+#### Project Structure
+- `EntryPoint.cs` - Main Vegas script entry point
+- `AudioProcessor.cs` - Core audio processing logic
+- `SettingsManager.cs` - Settings and presets management
+- `ChorusCrispDialog.cs` - UI dialog implementation
+
+#### Creating Releases
+1. Update version in `Properties\AssemblyInfo.cs`
+2. Build Release DLL: `dotnet build --configuration Release`
+3. Create GitHub Release with the `ChorusCrisp.dll` from `bin\Release\`
+4. Tag the release with version number
+
 ## What It Does
 
 Chorus Crisp automates a technique where each audio clip is:
@@ -24,16 +56,20 @@ Notice how each clip now has an overlapping section with crossfades, and the sec
 
 ## Installation
 
-1. Download `ChorusCrisp.cs`
+### Option 1: Download Release DLL (Recommended)
+1. Go to [Releases](https://github.com/adiglows/ChorusCrisp/releases) and download the latest `ChorusCrisp.dll`
 2. Place it in your Vegas Script Menu folder:
    ```
    C:\Users\[YourName]\Documents\Vegas Script Menu\
    ```
    Or create a subfolder:
    ```
-   C:\Users\[YourName]\Documents\Vegas Script Menu\ChorusCrisp\ChorusCrisp.cs
+   C:\Users\[YourName]\Documents\Vegas Script Menu\ChorusCrisp\ChorusCrisp.dll
    ```
-3. In Vegas Pro, go to **Tools → Scripting → Rescan Script Menu Folder**
+3. Restart Vegas Pro or go to **Tools → Scripting → Rescan Script Menu Folder**
+
+### Option 2: Build from Source
+See the "For Developers" section above for building instructions.
 
 ## Usage
 
