@@ -1,0 +1,32 @@
+# Build outputs
+bin/
+obj/
+
+# IDE files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Visual Studio Code
+.vscode/
+
+# User-specific files
+*.user
+*.cache
+*.dll
+*.pdb
+*.exe
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
