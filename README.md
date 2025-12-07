@@ -1,6 +1,6 @@
 # Chorus Crisp
 
-A Vegas Pro script for creating punchy, layered vocal chop effects commonly used in Sparta Remixes.
+A Vegas Pro script for creating punchy, layered vocal chop effects commonly used in Sparta Remixes..
 
 ## For Developers
 
