@@ -192,22 +192,188 @@ public class ChorusCrispPreset
     public int CrispValue;
     public int OffsetValue;
     public int CurveIndex;
+    public bool IsUserPreset;
+    public bool IsSeparator;
     
-    public ChorusCrispPreset(string name, int splice, int crisp, int offset, int curve)
+    public ChorusCrispPreset(string name, int splice, int crisp, int offset, int curve, bool isUser = false)
     {
         Name = name;
         SpliceValue = splice;
         CrispValue = crisp;
         OffsetValue = offset;
         CurveIndex = curve;
+        IsUserPreset = isUser;
+        IsSeparator = false;
+    }
+    
+    public static ChorusCrispPreset CreateSeparator(string label)
+    {
+        ChorusCrispPreset sep = new ChorusCrispPreset(label, -1, -1, -1, -1, false);
+        sep.IsSeparator = true;
+        return sep;
     }
     
     public override string ToString() { return Name; }
 }
 
+public class ChorusCrispUserPresets
+{
+    private static string GetUserPresetsPath()
+    {
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ChorusCrisp");
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
+        return Path.Combine(folder, "userpresets.txt");
+    }
+    
+    public static List<ChorusCrispPreset> Load()
+    {
+        List<ChorusCrispPreset> list = new List<ChorusCrispPreset>();
+        try
+        {
+            string path = GetUserPresetsPath();
+            if (File.Exists(path))
+            {
+                string[] lines = File.ReadAllLines(path);
+                foreach (string line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    string[] parts = line.Split('|');
+                    if (parts.Length == 5)
+                    {
+                        int splice, crisp, offset, curve;
+                        if (int.TryParse(parts[1], out splice) &&
+                            int.TryParse(parts[2], out crisp) &&
+                            int.TryParse(parts[3], out offset) &&
+                            int.TryParse(parts[4], out curve))
+                        {
+                            list.Add(new ChorusCrispPreset(parts[0], splice, crisp, offset, curve, true));
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+        return list;
+    }
+    
+    public static void Save(List<ChorusCrispPreset> userPresets)
+    {
+        try
+        {
+            List<string> lines = new List<string>();
+            foreach (ChorusCrispPreset p in userPresets)
+            {
+                if (p.IsUserPreset && !p.IsSeparator)
+                {
+                    lines.Add(string.Format("{0}|{1}|{2}|{3}|{4}", 
+                        p.Name, p.SpliceValue, p.CrispValue, p.OffsetValue, p.CurveIndex));
+                }
+            }
+            File.WriteAllLines(GetUserPresetsPath(), lines.ToArray());
+        }
+        catch { }
+    }
+    
+    public static void Add(ChorusCrispPreset preset)
+    {
+        List<ChorusCrispPreset> existing = Load();
+        existing.Add(preset);
+        Save(existing);
+    }
+    
+    public static void Delete(string presetName)
+    {
+        List<ChorusCrispPreset> existing = Load();
+        existing.RemoveAll(p => p.Name == presetName);
+        Save(existing);
+    }
+}
+
+public class PresetNameDialog : Form
+{
+    private TextBox nameBox;
+    private Button okButton;
+    private Button cancelButton;
+    
+    public string PresetName { get { return nameBox.Text.Trim(); } }
+    
+    public PresetNameDialog()
+    {
+        this.Text = "Save Preset";
+        this.ClientSize = new Size(300, 120);
+        this.FormBorderStyle = FormBorderStyle.FixedDialog;
+        this.MaximizeBox = false;
+        this.MinimizeBox = false;
+        this.StartPosition = FormStartPosition.CenterParent;
+        this.BackColor = Color.FromArgb(45, 45, 48);
+        this.ForeColor = Color.White;
+        
+        Label prompt = new Label();
+        prompt.Text = "Enter preset name:";
+        prompt.Location = new Point(15, 15);
+        prompt.Size = new Size(270, 20);
+        prompt.ForeColor = Color.White;
+        this.Controls.Add(prompt);
+        
+        nameBox = new TextBox();
+        nameBox.Location = new Point(15, 40);
+        nameBox.Size = new Size(270, 25);
+        nameBox.Font = new Font(this.Font.FontFamily, 10);
+        nameBox.MaxLength = 50;
+        this.Controls.Add(nameBox);
+        
+        okButton = new Button();
+        okButton.Text = "Save";
+        okButton.Location = new Point(70, 75);
+        okButton.Size = new Size(75, 30);
+        okButton.BackColor = Color.FromArgb(0, 122, 204);
+        okButton.ForeColor = Color.White;
+        okButton.FlatStyle = FlatStyle.Flat;
+        okButton.DialogResult = DialogResult.OK;
+        okButton.Click += OkButton_Click;
+        this.Controls.Add(okButton);
+        
+        cancelButton = new Button();
+        cancelButton.Text = "Cancel";
+        cancelButton.Location = new Point(155, 75);
+        cancelButton.Size = new Size(75, 30);
+        cancelButton.BackColor = Color.FromArgb(80, 80, 80);
+        cancelButton.ForeColor = Color.White;
+        cancelButton.FlatStyle = FlatStyle.Flat;
+        cancelButton.DialogResult = DialogResult.Cancel;
+        this.Controls.Add(cancelButton);
+        
+        this.AcceptButton = okButton;
+        this.CancelButton = cancelButton;
+    }
+    
+    private void OkButton_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(nameBox.Text))
+        {
+            MessageBox.Show("Please enter a preset name.", "Save Preset", 
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            this.DialogResult = DialogResult.None;
+            return;
+        }
+        
+        // Check for invalid characters
+        if (nameBox.Text.Contains("|"))
+        {
+            MessageBox.Show("Preset name cannot contain the '|' character.", "Save Preset",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            this.DialogResult = DialogResult.None;
+            return;
+        }
+    }
+}
+
 public class ChorusCrispDialog : Form
 {
     private ComboBox presetCombo;
+    private Button savePresetButton;
+    private Button deletePresetButton;
     private TrackBar spliceSlider;
     private TrackBar crispSlider;
     private TrackBar offsetSlider;
@@ -219,7 +385,8 @@ public class ChorusCrispDialog : Form
     private Button cancelButton;
     
     private bool isLoadingPreset = false;
-    private ChorusCrispPreset[] presets;
+    private List<ChorusCrispPreset> allPresets;
+    private int userPresetStartIndex = -1;
 
     public int SplicePosition { get { return spliceSlider.Value; } }
     public int Crispness { get { return 100 - crispSlider.Value; } }
@@ -249,25 +416,83 @@ public class ChorusCrispDialog : Form
     
     private void InitializePresets()
     {
-        // Presets: Name, SpliceSlider, CrispSlider (inverted), OffsetSlider (inverted), CurveIndex
-        // CurveIndex: 0=Linear, 1=Fast, 2=Slow, 3=Sharp, 4=Smooth
+        allPresets = new List<ChorusCrispPreset>();
         
-        // For CrispSlider: duckDb = (100 - sliderValue) / 100 * -15
-        // -3 dB -> (100 - x)/100 * -15 = -3 -> x = 80
-        // -5 dB -> (100 - x)/100 * -15 = -5 -> x = 67
+        // Built-in presets
+        allPresets.Add(new ChorusCrispPreset("Custom", -1, -1, -1, -1));
+        allPresets.Add(new ChorusCrispPreset("Jario Style", 50, 80, 20, 4));
+        allPresets.Add(new ChorusCrispPreset("Standard", 40, 80, 10, 0));
+        allPresets.Add(new ChorusCrispPreset("Snappy", 35, 67, 5, 1));
         
-        // For OffsetSlider: offset% = 100 - sliderValue
-        // 80% -> sliderValue = 20
-        // 90% -> sliderValue = 10
-        // 95% -> sliderValue = 5
-        
-        presets = new ChorusCrispPreset[]
+        // Load user presets
+        List<ChorusCrispPreset> userPresets = ChorusCrispUserPresets.Load();
+        if (userPresets.Count > 0)
         {
-            new ChorusCrispPreset("Custom", -1, -1, -1, -1),
-            new ChorusCrispPreset("Jario Style", 50, 80, 20, 4),
-            new ChorusCrispPreset("Standard", 40, 80, 10, 0),
-            new ChorusCrispPreset("Snappy", 35, 67, 5, 1)
-        };
+            allPresets.Add(ChorusCrispPreset.CreateSeparator("─── User Presets ───"));
+            userPresetStartIndex = allPresets.Count;
+            allPresets.AddRange(userPresets);
+        }
+    }
+    
+    private void RefreshPresetList()
+    {
+        isLoadingPreset = true;
+        
+        // Remember current selection if it's a user preset
+        string currentSelection = null;
+        if (presetCombo.SelectedIndex >= 0)
+        {
+            ChorusCrispPreset selected = allPresets[presetCombo.SelectedIndex];
+            if (selected.IsUserPreset)
+                currentSelection = selected.Name;
+        }
+        
+        // Rebuild preset list
+        allPresets.Clear();
+        presetCombo.Items.Clear();
+        
+        // Built-in presets
+        allPresets.Add(new ChorusCrispPreset("Custom", -1, -1, -1, -1));
+        allPresets.Add(new ChorusCrispPreset("Jario Style", 50, 80, 20, 4));
+        allPresets.Add(new ChorusCrispPreset("Standard", 40, 80, 10, 0));
+        allPresets.Add(new ChorusCrispPreset("Snappy", 35, 67, 5, 1));
+        
+        // Load user presets
+        List<ChorusCrispPreset> userPresets = ChorusCrispUserPresets.Load();
+        if (userPresets.Count > 0)
+        {
+            allPresets.Add(ChorusCrispPreset.CreateSeparator("─── User Presets ───"));
+            userPresetStartIndex = allPresets.Count;
+            allPresets.AddRange(userPresets);
+        }
+        else
+        {
+            userPresetStartIndex = -1;
+        }
+        
+        // Repopulate combo box
+        foreach (ChorusCrispPreset preset in allPresets)
+        {
+            presetCombo.Items.Add(preset);
+        }
+        
+        // Try to restore selection
+        int newIndex = 0;
+        if (currentSelection != null)
+        {
+            for (int i = 0; i < allPresets.Count; i++)
+            {
+                if (allPresets[i].Name == currentSelection && allPresets[i].IsUserPreset)
+                {
+                    newIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        presetCombo.SelectedIndex = newIndex;
+        isLoadingPreset = false;
+        UpdateDeleteButtonState();
     }
 
     private void InitializeComponent()
@@ -276,7 +501,7 @@ public class ChorusCrispDialog : Form
         this.AutoScaleDimensions = new SizeF(96F, 96F);
         
         this.Text = "Chorus Crisp";
-        this.ClientSize = new Size(450, 420);
+        this.ClientSize = new Size(450, 460);
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.MaximizeBox = false;
         this.MinimizeBox = false;
@@ -296,16 +521,41 @@ public class ChorusCrispDialog : Form
 
         presetCombo = new ComboBox();
         presetCombo.Location = new Point(85, yPos - 3);
-        presetCombo.Size = new Size(345, 28);
+        presetCombo.Size = new Size(250, 28);
         presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         presetCombo.Font = new Font(this.Font.FontFamily, 10);
-        foreach (ChorusCrispPreset preset in presets)
+        foreach (ChorusCrispPreset preset in allPresets)
         {
             presetCombo.Items.Add(preset);
         }
         presetCombo.SelectedIndex = 0;
         presetCombo.SelectedIndexChanged += PresetCombo_SelectedIndexChanged;
         this.Controls.Add(presetCombo);
+        
+        // Save preset button
+        savePresetButton = new Button();
+        savePresetButton.Text = "Save";
+        savePresetButton.Location = new Point(340, yPos - 3);
+        savePresetButton.Size = new Size(50, 26);
+        savePresetButton.BackColor = Color.FromArgb(60, 60, 65);
+        savePresetButton.ForeColor = Color.White;
+        savePresetButton.FlatStyle = FlatStyle.Flat;
+        savePresetButton.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
+        savePresetButton.Click += SavePresetButton_Click;
+        this.Controls.Add(savePresetButton);
+        
+        // Delete preset button
+        deletePresetButton = new Button();
+        deletePresetButton.Text = "Del";
+        deletePresetButton.Location = new Point(395, yPos - 3);
+        deletePresetButton.Size = new Size(40, 26);
+        deletePresetButton.BackColor = Color.FromArgb(60, 60, 65);
+        deletePresetButton.ForeColor = Color.White;
+        deletePresetButton.FlatStyle = FlatStyle.Flat;
+        deletePresetButton.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
+        deletePresetButton.Enabled = false;
+        deletePresetButton.Click += DeletePresetButton_Click;
+        this.Controls.Add(deletePresetButton);
 
         yPos += 40;
 
@@ -504,12 +754,118 @@ public class ChorusCrispDialog : Form
         settings.Save();
     }
     
+    private void SavePresetButton_Click(object sender, EventArgs e)
+    {
+        using (PresetNameDialog nameDialog = new PresetNameDialog())
+        {
+            if (nameDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                string name = nameDialog.PresetName;
+                
+                // Check if name already exists
+                foreach (ChorusCrispPreset p in allPresets)
+                {
+                    if (p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && !p.IsSeparator)
+                    {
+                        DialogResult overwrite = MessageBox.Show(
+                            string.Format("A preset named '{0}' already exists.\nDo you want to overwrite it?", name),
+                            "Preset Exists", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        
+                        if (overwrite == DialogResult.No)
+                            return;
+                        
+                        // Delete existing and add new
+                        if (p.IsUserPreset)
+                        {
+                            ChorusCrispUserPresets.Delete(name);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Cannot overwrite built-in presets.\nPlease choose a different name.",
+                                "Save Preset", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                        break;
+                    }
+                }
+                
+                // Create and save new preset
+                ChorusCrispPreset newPreset = new ChorusCrispPreset(
+                    name, spliceSlider.Value, crispSlider.Value, 
+                    offsetSlider.Value, curveCombo.SelectedIndex, true);
+                
+                ChorusCrispUserPresets.Add(newPreset);
+                RefreshPresetList();
+                
+                // Select the newly saved preset
+                for (int i = 0; i < allPresets.Count; i++)
+                {
+                    if (allPresets[i].Name == name && allPresets[i].IsUserPreset)
+                    {
+                        presetCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    private void DeletePresetButton_Click(object sender, EventArgs e)
+    {
+        if (presetCombo.SelectedIndex < 0) return;
+        
+        ChorusCrispPreset selected = allPresets[presetCombo.SelectedIndex];
+        if (!selected.IsUserPreset) return;
+        
+        DialogResult confirm = MessageBox.Show(
+            string.Format("Delete preset '{0}'?", selected.Name),
+            "Delete Preset", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        
+        if (confirm == DialogResult.Yes)
+        {
+            ChorusCrispUserPresets.Delete(selected.Name);
+            RefreshPresetList();
+            presetCombo.SelectedIndex = 0;
+        }
+    }
+    
+    private void UpdateDeleteButtonState()
+    {
+        if (presetCombo.SelectedIndex >= 0)
+        {
+            ChorusCrispPreset selected = allPresets[presetCombo.SelectedIndex];
+            deletePresetButton.Enabled = selected.IsUserPreset;
+        }
+        else
+        {
+            deletePresetButton.Enabled = false;
+        }
+    }
+    
     private void PresetCombo_SelectedIndexChanged(object sender, EventArgs e)
     {
-        if (presetCombo.SelectedIndex <= 0) return;
+        if (presetCombo.SelectedIndex < 0) return;
         
-        ChorusCrispPreset preset = presets[presetCombo.SelectedIndex];
-        if (preset.SpliceValue < 0) return;
+        ChorusCrispPreset preset = allPresets[presetCombo.SelectedIndex];
+        
+        // Skip separator items
+        if (preset.IsSeparator)
+        {
+            // Move to next valid item
+            if (presetCombo.SelectedIndex + 1 < presetCombo.Items.Count)
+            {
+                presetCombo.SelectedIndex++;
+            }
+            else
+            {
+                presetCombo.SelectedIndex = 0;
+            }
+            return;
+        }
+        
+        UpdateDeleteButtonState();
+        
+        if (preset.SpliceValue < 0) return; // Custom preset
         
         isLoadingPreset = true;
         spliceSlider.Value = preset.SpliceValue;
@@ -539,10 +895,12 @@ public class ChorusCrispDialog : Form
     
     private void CheckForMatchingPreset()
     {
-        // Check if current values match any preset
-        for (int i = 1; i < presets.Length; i++)
+        // Check if current values match any preset (including user presets)
+        for (int i = 1; i < allPresets.Count; i++)
         {
-            ChorusCrispPreset p = presets[i];
+            ChorusCrispPreset p = allPresets[i];
+            if (p.IsSeparator) continue;
+            
             if (spliceSlider.Value == p.SpliceValue &&
                 crispSlider.Value == p.CrispValue &&
                 offsetSlider.Value == p.OffsetValue &&
@@ -551,6 +909,7 @@ public class ChorusCrispDialog : Form
                 isLoadingPreset = true;
                 presetCombo.SelectedIndex = i;
                 isLoadingPreset = false;
+                UpdateDeleteButtonState();
                 return;
             }
         }
@@ -558,6 +917,7 @@ public class ChorusCrispDialog : Form
         isLoadingPreset = true;
         presetCombo.SelectedIndex = 0;
         isLoadingPreset = false;
+        UpdateDeleteButtonState();
     }
     
     private void UpdateLabels()
