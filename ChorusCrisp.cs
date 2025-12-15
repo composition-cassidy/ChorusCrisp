@@ -111,7 +111,7 @@ public class EntryPoint
             secondEvent.Length = secondEvent.Length + overlapDuration;
             
             double linearGain = Math.Pow(10.0, duckDb / 20.0);
-            audioSecond.NormalizeGain = linearGain;
+            audioSecond.NormalizeGain = audioSecond.NormalizeGain * linearGain;
         }
 
         secondEvent.FadeIn.Length = overlapDuration;
